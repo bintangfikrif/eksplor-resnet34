@@ -14,7 +14,7 @@
 ---
 
 ### 📈 Kurva Training
-![Plot](img\Plot.jpg)
+![Plot](img/Plot.jpg)
 
 #### Plain-34 Training Results
 
@@ -33,7 +33,7 @@
 ### 🎯 Analisis Confusion Matrix
 
 #### Plain-34 Confusion Matrix
-![Plain-34 Confusion Matrix](img\Plain34_Conv.jpg)
+![Plain-34 Confusion Matrix](img/Plain34_Conv.jpg)
 
 **Classification Report Plain-34:**
 ```
@@ -55,7 +55,7 @@ weighted avg       0.42      0.38      0.30       222
 - **Performa Buruk Secara Umum**: Macro avg F1-score hanya 0.30, menunjukkan ketidakseimbangan klasifikasi yang parah
 
 #### ResNet-34 Confusion Matrix  
-![ResNet-34 Confusion Matrix](img\ResNet_Conv.jpg)
+![ResNet-34 Confusion Matrix](img/ResNet_Conv.jpg)
 
 **Classification Report ResNet-34:**
 ```
@@ -127,4 +127,4 @@ Hasil ini memvalidasi pentingnya **residual connection** dalam mengatasi vanishi
   - Weight Decay: `1e-4`  
   - Batch Size: `32`  
   - Epochs: `10`  
-  - Loss Function: CrossEntropyLoss  
+  - Loss Function: CrossEntropyLoss
