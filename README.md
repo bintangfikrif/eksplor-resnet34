@@ -30,6 +30,61 @@
 
 ---
 
+### 🎯 Analisis Confusion Matrix
+
+#### Plain-34 Confusion Matrix
+![Plain-34 Confusion Matrix](img\Plain34_Conv.jpg)
+
+**Classification Report Plain-34:**
+```
+              precision    recall  f1-score   support
+       bakso       0.00      0.00      0.00        45
+   gado_gado       0.44      0.17      0.25        46
+ nasi_goreng       0.35      0.54      0.42        41
+     rendang       1.00      0.15      0.27        39
+   soto_ayam       0.39      0.96      0.56        51
+
+    accuracy                           0.38       222
+   macro avg       0.44      0.37      0.30       222
+weighted avg       0.42      0.38      0.30       222
+```
+
+**Analisis Plain-34:**
+- **Kegagalan Total pada Bakso**: Precision dan recall 0.00, model tidak dapat mengenali bakso sama sekali
+- **Bias Terhadap Soto Ayam**: Recall 96% untuk soto_ayam tetapi precision rendah (39%), menunjukkan over-prediction
+- **Performa Buruk Secara Umum**: Macro avg F1-score hanya 0.30, menunjukkan ketidakseimbangan klasifikasi yang parah
+
+#### ResNet-34 Confusion Matrix  
+![ResNet-34 Confusion Matrix](img\ResNet_Conv.jpg)
+
+**Classification Report ResNet-34:**
+```
+              precision    recall  f1-score   support
+       bakso       0.63      0.71      0.67        45
+   gado_gado       0.71      0.37      0.49        46
+ nasi_goreng       0.79      0.73      0.76        41
+     rendang       0.73      0.92      0.82        39
+   soto_ayam       0.67      0.78      0.72        51
+
+    accuracy                           0.70       222
+   macro avg       0.71      0.70      0.69       222
+weighted avg       0.70      0.70      0.69       222
+```
+
+**Analisis ResNet-34:**
+- **Performa Seimbang**: Semua kelas memiliki F1-score > 0.49, tidak ada kelas yang gagal total
+- **Rendang Terbaik**: F1-score tertinggi 0.82 dengan recall 92%
+- **Nasi Goreng Konsisten**: Precision tertinggi 79% dan F1-score 0.76
+- **Gado-Gado Tersulit**: F1-score terendah 0.49, kemungkinan karena variasi visual yang tinggi
+
+**Perbandingan Key Insights:**
+- **ResNet-34 mengatasi class imbalance** lebih baik dengan macro avg F1-score 0.69 vs Plain-34 0.30
+- **Plain-34 mengalami catastrophic failure** pada kelas bakso (F1=0.00)
+- **ResNet-34 menunjukkan generalisasi yang superior** pada semua kelas makanan
+- **Gap precision-recall** pada Plain-34 menunjukkan ketidakstabilan prediksi yang parah
+
+---
+
 ## 🔎 Analisis Singkat
 
 Dari hasil percobaan, terlihat bahwa **ResNet-34 dengan residual connection** menunjukkan performa yang jauh lebih superior:
@@ -73,5 +128,3 @@ Hasil ini memvalidasi pentingnya **residual connection** dalam mengatasi vanishi
   - Batch Size: `32`  
   - Epochs: `10`  
   - Loss Function: CrossEntropyLoss  
-
----
