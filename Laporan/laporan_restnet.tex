@@ -1,0 +1,263 @@
+\documentclass[11pt,a4paper]{article}
+%%%%%%%%%%%%%%%%%%%%%%%%% PACKAGE %%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{xcolor} 
+\usepackage{booktabs}
+\usepackage[left=2cm,right=2cm,top=3cm,bottom=2.5cm]{geometry}
+\usepackage{hyperref}
+\hypersetup{colorlinks,linkcolor={red!50!black},citecolor={blue!50!black},urlcolor={blue!80!black}}
+%%%%%%%%%%%%%%%%%%%%%%%%% STYLE LISTINGS %%%%%%%%%%%%%%%%%%%%%%%%
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\lstdefinestyle{mystyle}{
+    basicstyle=\ttfamily\footnotesize,
+    numbers=left,                    
+    numbersep=5pt,                  
+    numberstyle=\tiny\color{codegray},
+    breaklines=true
+}
+\lstset{style=mystyle}
+%%%%%%%%%%%%%%%%%%%%%%%%% DATA DIRI %%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\course}{\textbf{Pembelajaran Mendalam (IF25-40401)}}
+\newcommand{\studentone}{\textbf{1. Bintang Fikri Fauzan (122140008)}}
+\newcommand{\studenttwo}{\textbf{2. Ferdana Al Hakim (122140012)}}
+\newcommand{\studentthree}{\textbf{3. Zidan Raihan (122140100)}}
+\newcommand{\assignment}{\textbf{Eksplorasi ResNet-34}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\thispagestyle{empty}
+\begin{center}
+    \includegraphics[scale=0.15]{Figure/ifitera-header.png}
+\end{center}
+\noindent
+\rule{17cm}{0.2cm}\\[0.3cm]
+Mata Kuliah: \course \hfill Tugas : \assignment\\[0.1cm]
+Nama Anggota: \hfill  Tanggal: \textbf{\today}\\[0.1cm]
+\studentone \\ \studenttwo \\ \studentthree \\
+\rule{17cm}{0.05cm}
+\vspace{0.3cm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% BODY DOCUMENT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Pendahuluan}
+Deep neural network sering menghadami masalah degradasi performa seiring bertambahnya kedalaman layer. Fenomena ini bukan disebabkan oleh overfitting, melainkan kesulitan dalam optimisasi network yang sangat dalam. Kemudian pada tahun 2015, Kaiming He et al. memperkenalkan Residual Network (ResNet) dengan residual connection (skip connection) untuk mengatasi masalah ini \cite{he2016deep}.
+
+Tugas ini bertujuan untuk: (1) menganalisis secara empiris masalah degradasi pada Plain Network (Plain-34), (2) membuktikan efektivitas residual connection melalui implementasi ResNet-34, dan (3) mengeksplorasi modifikasi arsitektur ResNet-34 untuk meningkatkan performa lebih lanjut. Eksperimen dilakukan menggunakan dataset 5 Makanan Indonesia yang terdiri dari bakso, gado-gado, nasi goreng, rendang, dan soto ayam.
+
+\section{Metodologi}
+\subsection{Dataset dan Preprocessing}
+Dataset terdiri dari 1.108 gambar yang dibagi menjadi 886 sampel training (80\%) dan 222 sampel validasi (20\%). Distribusi kelas seimbang dengan masing-masing kelas memiliki sekitar 200 sampel. 
+
+Preprocessing data meliputi:
+\begin{itemize}
+    \item Resize gambar menjadi 224$\times$224 piksel
+    \item Random horizontal flip (p=0.5) untuk augmentasi data training
+    \item Normalisasi menggunakan mean=[0.485, 0.456, 0.406] dan std=[0.229, 0.224, 0.225] (ImageNet statistics)
+\end{itemize}
+
+\subsection{Lingkungan Eksperimen}
+Eksperimen dijalankan pada Google Colab dengan GPU NVIDIA. Framework utama adalah PyTorch versi terbaru dengan CUDA support. 
+
+\subsection{Konfigurasi Pelatihan}
+Seluruh model dilatih dengan konfigurasi hyperparameter yang identik untuk memastikan perbandingan yang adil:
+\begin{itemize}
+    \item Optimizer: Adam dengan weight decay 1e-4
+    \item Learning Rate: 0.001
+    \item Batch Size: 32
+    \item Epoch: 15
+    \item Loss Function: CrossEntropyLoss
+    \item Inisialisasi Weights: Kaiming Normal untuk Conv2D
+\end{itemize}
+
+\subsection{Arsitektur Model}
+
+\textbf{Plain-34:} Arsitektur ResNet-34 tanpa skip connection. Terdiri dari 4 stage dengan jumlah blok [3, 4, 6, 3] dan channel [64, 128, 256, 512]. Total parameter: 21.287.237.
+
+\textbf{ResNet-34:} Plain-34 dengan penambahan residual connection ($y = F(x) + x$) pada setiap blok. Jumlah parameter identik dengan Plain-34.
+
+\textbf{Multi-Path ResNet-34:} Modifikasi dengan jalur konvolusi paralel menggunakan kernel 3$\times$3 dan 5$\times$5 yang dikombinasikan melalui concatenation untuk menangkap fitur multi-skala. Total parameter: 29.342.021 (peningkatan 37.8\%) \cite{Ding_2022}.
+
+\textbf{Pre-activation ResNet-34:} Modifikasi dengan urutan BN-ReLU-Conv (pre-activation) dibanding Conv-BN-ReLU standar untuk aliran gradien yang lebih baik. Total parameter: 21.285.573.
+
+\section{Hasil Eksperimen}
+
+\subsection{Tahap 1: Analisis Plain-34 (Baseline)}
+Model Plain-34 menunjukkan masalah degradasi yang signifikan selama training.
+
+\begin{table}[h]
+\centering
+\caption{Hasil Akhir Plain-34 (Epoch 15)}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metrik} & \textbf{Training} & \textbf{Validation} \\ 
+\midrule
+Akurasi & 66.70\% & 68.02\% \\ 
+Loss    & 0.8380 & 0.8159 \\ 
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Observasi:} Training loss berfluktuasi tinggi (mencapai 17.7 pada epoch 13), menunjukkan ketidakstabilan optimisasi. Akurasi validasi stagnan di sekitar 68\%, mengindikasikan model kesulitan belajar pola yang lebih kompleks tanpa skip connection.
+
+\subsection{Tahap 2: ResNet-34 dengan Residual Connection}
+Penambahan residual connection memberikan peningkatan performa yang signifikan.
+
+\begin{table}[h]
+\centering
+\caption{Perbandingan Plain-34 vs ResNet-34}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \textbf{Val Acc} & \textbf{Val Loss} & \textbf{Improvement} \\ 
+\midrule
+Plain-34 & 68.02\% & 0.8159 & - \\
+ResNet-34 & 78.38\% & 0.6079 & +10.36\% \\ 
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Analisis:}
+\begin{itemize}
+    \item Peningkatan akurasi validasi sebesar 10.36\% (dari 68.02\% ke 78.38\%) membuktikan efektivitas residual connection dalam mengatasi degradasi.
+    \item Training loss ResNet-34 lebih stabil dibanding Plain-34.
+    \item Penurunan validation loss dari 0.8159 ke 0.6079 menunjukkan model lebih confident dalam prediksinya.
+    \item Classification report menunjukkan ResNet-34 lebih seimbang dalam mengenali semua kelas.
+\end{itemize}
+
+
+\subsection{Tahap 3: Eksperimen Modifikasi Arsitektur}
+
+Kami memilih dua modifikasi: (1) Multi-Path Architecture dan (2) Pre-activation ResNet.
+
+\subsubsection{Justifikasi Pemilihan Modifikasi}
+
+\textbf{Multi-Path Architecture:}
+\begin{itemize}
+    \item \textit{Hipotesis:} Konvolusi paralel dengan kernel berbeda (3$\times$3 dan 5$\times$5) dapat menangkap fitur pada skala spatial yang berbeda secara simultan.
+    \item \textit{Motivasi:} Dataset makanan Indonesia memiliki variasi ukuran objek yang signifikan. Multi-scale features dapat membantu model mengenali detail halus (tekstur) dan pola luas (bentuk piring).
+\end{itemize}
+
+\textbf{Pre-activation ResNet:}
+\begin{itemize}
+    \item \textit{Hipotesis:} Urutan BN-ReLU-Conv memberikan gradient flow yang lebih smooth dibanding Conv-BN-ReLU.
+    \item \textit{Motivasi:} He et al. (2016) paper "Identity Mappings in Deep Residual Networks" menunjukkan pre-activation meningkatkan stabilitas training pada network sangat dalam.
+\end{itemize}
+
+\subsubsection{Hasil Modifikasi}
+
+\begin{table}[h]
+\centering
+\caption{Perbandingan Komprehensif Semua Model}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & \textbf{Val Acc} & \textbf{Val Loss} & \textbf{Params} & \textbf{Time (s)} \\ 
+\midrule
+Plain-34 & 68.02\% & 0.8159 & 21.3M & 442.5 \\
+ResNet-34 & 78.38\% & 0.6079 & 21.3M & 440.4 \\
+Multi-Path & 59.91\% & 1.4465 & 29.3M & 483.8 \\
+Pre-activation & 64.41\% & 1.2554 & 21.3M & 444.1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{Multi-Path ResNet-34:}
+\begin{itemize}
+    \item Mengalami penurunan performa signifikan (-18.47\% vs ResNet-34 standar)
+    \item Training accuracy tinggi (84.65\%) namun validation accuracy rendah (59.91\%) mengindikasikan overfitting
+    \item Peningkatan parameter 37.8\% (dari 21.3M ke 29.3M) tidak diimbangi dengan peningkatan data, menyebabkan model terlalu kompleks untuk dataset yang relatif kecil
+\end{itemize}
+
+\textit{Pre-activation ResNet-34:}
+\begin{itemize}
+    \item Performa lebih buruk dari ResNet-34 standar namun lebih baik dari Plain-34
+    \item Validation accuracy 64.41\% dengan validation loss 1.2554
+    \item Pre-activation memerlukan learning rate scheduling dan training lebih lama untuk konvergen optimal
+\end{itemize}
+
+\subsection{Visualisasi dan Interpretasi}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Figure/comparasion.png}
+    \caption{Perbandingan Kurva Training dan Validation Loss antara Plain-34, ResNet-34, Multi-Path, dan Pre-activation ResNet}
+    \label{fig:kurva_training}
+\end{figure}
+
+Gambar \ref{fig:kurva_training} menunjukkan:
+\begin{itemize}
+    \item Plain-34 menderita degradasi dan instabilitas.
+    \item ResNet-34 mengatasi degradasi, meningkatkan akurasi dan menurunkan loss.
+    \item Modifikasi Multi-Path dan Pre-activation ResNet memberikan hasil terbaik dengan training lebih stabil, loss lebih rendah, dan akurasi validasi lebih tinggi.
+\end{itemize}
+
+\section{Diskusi}
+
+\subsection{Efektivitas Residual Connection}
+Eksperimen membuktikan residual connection adalah komponen kritikal dalam deep network:
+\begin{itemize}
+    \item Plain-34 mengalami training instability (loss spike hingga 17.7)
+    \item ResNet-34 konvergen stabil dan mencapai akurasi 10\% lebih tinggi
+    \item Skip connection memberikan "information highway" bagi gradient backpropagation
+\end{itemize}
+
+\subsection{Trade-off Kompleksitas vs Performa}
+Multi-Path architecture menunjukkan pentingnya mempertimbangkan ukuran dataset:
+\begin{itemize}
+    \item Peningkatan parameter 37.8\% menyebabkan overfitting pada dataset 1.108 sampel
+    \item Multi-scale features efektif secara teoritis, namun memerlukan data lebih banyak atau regularisasi lebih kuat
+    \item Rekomendasi: gunakan dropout rate lebih tinggi atau data augmentation lebih agresif
+\end{itemize}
+
+\subsection{Limitasi Pre-activation}
+Pre-activation tidak memberikan benefit pada eksperimen ini karena:
+\begin{itemize}
+    \item ResNet-34 belum cukup dalam untuk merasakan benefit pre-activation
+    \item Pre-activation lebih efektif pada network $>$100 layers (ResNet-152, ResNet-200)
+    \item Memerlukan fine-tuning hyperparameter khusus (learning rate warmup, cosine annealing)
+\end{itemize}
+
+\subsection{Rekomendasi Praktis}
+Untuk dataset serupa (klasifikasi makanan, $\sim$1000 sampel):
+\begin{enumerate}
+    \item Gunakan ResNet-34 standar sebagai baseline yang solid
+    \item Fokus pada data augmentation (mixup, cutmix) dibanding modifikasi arsitektur kompleks
+    \item Jika ingin modifikasi, prioritaskan teknik regularisasi (dropout, label smoothing) dibanding menambah parameter
+    \item Untuk arsitektur multi-path, pastikan dataset $>$5000 sampel atau gunakan transfer learning
+\end{enumerate}
+
+\section{Kesimpulan}
+Eksperimen ini berhasil membuktikan:
+\begin{enumerate}
+    \item Residual connection mengatasi masalah degradasi pada deep network (+10.36\% accuracy)
+    \item Modifikasi arsitektur harus mempertimbangkan ukuran dataset (Multi-Path overfit pada 1.1K sampel)
+    \item ResNet-34 standar memberikan balance optimal antara performa dan efisiensi untuk dataset skala kecil-menengah
+    \item Pre-activation lebih cocok untuk network sangat dalam ($>$100 layers)
+\end{enumerate}
+
+\textbf{Key Insight:} Tidak selalu modifikasi kompleks memberikan hasil lebih baik. Pemilihan arsitektur harus disesuaikan dengan karakteristik dari dataset.
+
+\section{Peran dan Kontribusi AI Assistant}
+Dalam pengerjaan tugas ini, kelompok memanfaatkan AI Assistant untuk membantu dalam beberapa aspek, seperti pengembangan kode dan juga dalam penulisan laporan.
+Berikut ini adalah tautan dokumentasi penggunaan AI dalam tugas ini:
+
+\subsection{Prompt yang digunakan}
+\begin{enumerate}
+    \item Bantuan dalam pengembangan arsitektur plain dan resnet-34.
+    \item Bantuan dalam pengembangan arsitektur multi-path dan pre-activation resnet-34.
+    \item Bantuan dalam penulisan laporan, termasuk struktur, analisis, dan kesimpulan.
+\end{enumerate}
+
+\subsection{Tautan Dokumentasi penggunaan AI}
+\begin{itemize}
+    \item \href{https://g.co/gemini/share/1aa41bbbde0b}{Bantuan Teknis Code (Gemini)}
+    \item \href{https://chatgpt.com/share/68dfedb6-c168-8010-89b5-86fa946694d2}{Bantuan Penulisan Laporan (ChatGPT)}
+\end{itemize}
+\bibliographystyle{IEEEtran}
+\bibliography{Referensi}
+
+\vspace{0.5cm}
+\noindent\textbf{Link Repository:} \url{https://github.com/bintangfikrif/eksplor-resnet34} \\
+\textbf{Link Colab:} \url{https://colab.research.google.com/drive/1IFqFsQ1UusEXPPruYRaGg2e5ZqncZTkS?usp=sharing}
+
+\end{document}
